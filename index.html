@@ -69,6 +69,8 @@
 <p>For a total of <span id="final-length"></span> characters (compare with the <span id="input-length"></span> characters of your input). Notice that <a
         href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals">template literals</a> are abused here, taking advantage of the fact that the language doesn't complain about missing parentheses when we pass them as parameter. Also notice that your input string has to be big enough to compensate for the extra code needed to decode the resulting golfed string. That basically means your input has to be at least 96 characters long for the hack to be effective.</p>
 
+<canvas id="curve"></canvas>
+
 <h2>Decoding, step by step</h2>
 
 <p>To understand how decoding happens, just read it from inside out. Start by escape()ing your golfed string (spaces added for readability):</p>
@@ -103,6 +105,66 @@ Written by <a href="https://luciopaiva.com">Lucio Paiva</a><br>
     const decElem1 = document.getElementById("decoding-1");
     const decElem2 = document.getElementById("decoding-2");
     const decElem3 = document.getElementById("decoding-3");
+
+    function drawCurve() {
+        const c = document.getElementById("curve");
+        const x = c.getContext("2d");
+        const w = c.width = 300;
+        const h = c.height = 300;
+        const b = 20;
+
+        const uw = w - 2 * b;
+        const uh = h - 2 * b;
+
+        const sx = x => b + x;
+        const sy = y => h - b - (y / uh) * uh;
+
+        x.strokeStyle = "red";
+        x.setLineDash([5, 5]);
+        x.beginPath();
+        x.moveTo(sx(0), sy(0));
+        x.lineTo(sx(uw), sy(uh));
+        x.stroke();
+
+        x.strokeStyle = "black";
+        x.setLineDash([]);
+
+        x.beginPath();
+        x.moveTo(sx(0), sy(0));
+        x.lineTo(sx(uw), sy(0));
+        x.moveTo(sx(0), sy(0));
+        x.lineTo(sx(0), sy(uh));
+        x.stroke();
+
+        x.font = "10px monospace";
+        x.textAlign = "left";
+        x.fillText("input length", sx(uw - 80)|0, sy(-15)|0);
+        x.textAlign = "center";
+        x.fillText("94", sx(94)|0, sy(-15)|0);
+
+        x.save();
+        x.translate(b / 2, 120);
+        x.rotate(-Math.PI / 2);
+        x.textAlign = "left";
+        x.fillText("output length", 0, 0);
+        x.restore();
+
+        x.fillText("48", sx(0) - 12, sy(48));
+
+        x.strokeStyle = "blue";
+        x.beginPath();
+        x.moveTo(sx(0), sy(48));
+        x.lineTo(sx(uw), sy(48 + Math.ceil(uw / 2)));
+        x.stroke();
+
+        // i=94 is where golfing starts to make sense
+        x.setLineDash([5, 5]);
+        x.moveTo(sx(94), sy(0));
+        x.lineTo(sx(94), sy(48 + Math.ceil(94 / 2)));
+        x.stroke();
+        x.textAlign = "left";
+        x.fillText("worth golfing", sx(100)|0, sy(84)|0);
+    }
 
     function process() {
         let input = inputElem.value;
@@ -141,6 +203,7 @@ Written by <a href="https://luciopaiva.com">Lucio Paiva</a><br>
         decElem3.innerText = unescape(escape(golfed).replace(/u(..)/g, "$1%"));
     }
 
+    drawCurve();
     inputElem.addEventListener("input", process);
     process();
 </script>
