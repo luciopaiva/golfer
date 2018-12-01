@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Code golfer</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+        h2 {
+            margin-top: 40px;
+        }
+        pre {
+            font-family: monospace;
+            background-color: #ccc;
+            white-space: normal;
+            padding: 5px;
+        }
+        a, a:hover, a:active, a:visited {
+            color: blue;
+        }
+        .strike {
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Javascript code golfer</h1>
+
+<p>Golfing is the <span class="strike">act</span> art of making source code smaller, usually by abusing the language in some way.</p>
+
+<p>The technique below is frequently used in Javascript code golfing (see <a href="https://dwitter.net">dwitter.net</a> and look for some examples). It relies on the fact that Javascript uses UTF-16 (or UCS-2) to store strings. Each character occupies 16 bits, but source code is usually written with 8-bit characters. What if you could store 2 source code characters inside one UTF-16 char? Well, with a bit of hacking you actually can.</p>
+
+<p>Start by typing in some code below (example taken from <a href="https://www.dwitter.net/d/701">here</a>):</p>
+
+<textarea name="input" id="input" cols="80" rows="10">
+(F=Z=>{for(x.fillStyle=R(W=1/Z*4e3,W/2,W/4),i=Z*Z*2;n=i%Z,m=i/Z|0,i--;n%2^m%2&&x.fillRect((n-t%2-1)*W,(S(t)+m-1)*W,W,W));Z&&F(Z-6)})(36)//rm
+</textarea>
+
+<p>Resulting script:</p>
+
+<pre id="tldr"></pre>
+
+<h2>Encoding, step by step</h2>
+
+<p>First we make sure that the string has an even number of characters and add a space to the end if necessary. For each character, we obtain its code:</p>
+
+<pre id="codes"></pre>
+
+<p>Then we merge adjacent chars into pairs, each forming a single hex value:</p>
+
+<pre id="pairs"></pre>
+
+<p>The next step is prefixing each pair with `%u`, constructing a string of escaped characters:</p>
+
+<pre id="escaped"></pre>
+
+<p>Finally, we tell Javascript to unescape it, parsing each pair as if their were true unicode characters:</p>
+
+<pre id="golfed"></pre>
+
+<p>And that's it. Now you just need some code to wrap it around and make it ready for Javascript to parse and run it:</p>
+
+<pre id="final-script"></pre>
+
+<p>For a total of <span id="final-length"></span> characters (compare with the <span id="input-length"></span> characters of your input). Notice that <a
+        href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals">template literals</a> are abused here, taking advantage of the fact that the language doesn't complain about missing parentheses when we pass them as parameter. Also notice that your input string has to be big enough to compensate for the extra code needed to decode the resulting golfed string. That basically means your input has to be at least 96 characters long for the hack to be effective.</p>
+
+<h2>Decoding, step by step</h2>
+
+<p>To understand how decoding happens, just read it from inside out. Start by escape()ing your golfed string (spaces added for readability):</p>
+
+<pre id="decoding-1"></pre>
+
+<p>You will see our pairs back. The trick now is to break them into 8-bit chars again. That's what the `replace() part does. It replaces every `%uXXYY` with `%XX%YY` in a very hacky way with a very short regular expression (again, spaces added for readability):</p>
+
+<pre id="decoding-2"></pre>
+
+<p>Then unescape() comes into play, converting those hex values back into characters:</p>
+
+<pre id="decoding-3"></pre>
+
+<p>And we're done! We have our original source code back and ready to be eval()uated :-)</p>
+
+<hr>
+
+Written by <a href="https://luciopaiva.com">Lucio Paiva</a><br>
+2018-12-01
+
+<script>
+    const inputElem = document.getElementById("input");
+    const codesElem = document.getElementById("codes");
+    const pairsElem = document.getElementById("pairs");
+    const escapedElem = document.getElementById("escaped");
+    const golfedElem = document.getElementById("golfed");
+    const finalScriptElem = document.getElementById("final-script");
+    const tldrElem = document.getElementById("tldr");
+    const inputLenElem = document.getElementById("input-length");
+    const finalLenElem = document.getElementById("final-length");
+    const decElem1 = document.getElementById("decoding-1");
+    const decElem2 = document.getElementById("decoding-2");
+    const decElem3 = document.getElementById("decoding-3");
+
+    function process() {
+        let input = inputElem.value;
+
+        // make it even number of chars
+        if (input.length %2 === 1) {
+            input += " ";
+        }
+
+        const codes = Array.from(Array(input.length), (_,i) => input.charCodeAt(i));
+        const hex = codes.map(c => c.toString(16)).map(c => (c.length === 1 ? "0" : "") + c);
+
+        codesElem.innerText = hex.join(" ");
+
+        const pairs = [];
+        for (let i = 0; i < hex.length; i += 2) {
+            pairs[i>>>1] = hex[i] + hex[i+1];
+        }
+
+        pairsElem.innerText = pairs.join(" ");
+
+        const unicodes = pairs.map(p => `%u${p}`);
+
+        escapedElem.innerText = unicodes.join(" ");
+
+        const golfed = unescape(unicodes.join(""));
+        golfedElem.innerText = golfed;
+
+        finalScriptElem.innerText = `eval(unescape(escape\`${golfed}\`.replace(/u(..)/g,"$1%")))`;
+        tldrElem.innerText = finalScriptElem.innerText;
+        finalLenElem.innerText = finalScriptElem.innerText.length.toString();
+        inputLenElem.innerText = inputElem.value.length.toString();
+
+        decElem1.innerText = escape(golfed).replace(/(.)%/g, "$1 %");
+        decElem2.innerText = escape(golfed).replace(/u(..)/g, "$1%").replace(/(.)%/g, "$1 %");
+        decElem3.innerText = unescape(escape(golfed).replace(/u(..)/g, "$1%"));
+    }
+
+    inputElem.addEventListener("input", process);
+    process();
+</script>
+
+</body>
+</html>
